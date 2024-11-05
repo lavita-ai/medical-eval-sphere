@@ -1,0 +1,12 @@
+## Input text: {{QUERY}}
+
+1. Does the input text contain any direct medical or health-related questions? A direct medical or health-related question is defined as a straightforward inquiry that seeks specific information about medical conditions, diseases, injuries, symptoms, treatments, medications, healthcare procedures, diagnostic tests, medical devices, patient care, wellness, preventive measures, or mental health. This includes questions formulated explicitly with interrogative structures, as well as declarative or imperative sentences that imply a direct question seeking specific medical or health-related information. Respond with "Yes" or "No".
+
+2. Correct any grammatical and spelling errors in the input text while retaining the original meaning and information.
+
+JSON Response Template:
+
+{
+    "medical_question": "Yes" or "No",
+    "corrected": "Corrected input text"
+}
