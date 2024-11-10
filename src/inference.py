@@ -14,7 +14,6 @@ from utils import normalize_json_response
 
 load_dotenv()
 
-anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
 huggingface_api_key = os.getenv('HUGGINGFACE_API_KEY')
 
 
@@ -22,7 +21,7 @@ class GenTools:
     def __init__(self):
         self.clients = {
             'openai': OpenAI(),
-            'anthropic': anthropic.Anthropic(api_key=anthropic_api_key),
+            'anthropic': anthropic.Anthropic(),
             'together': Together()
         }
         self.endpoint_manager = EndpointManager()
@@ -120,9 +119,9 @@ class GenTools:
         # some values to use based on model (reference: https://supabase.com/blog/matryoshka-embeddings)
         # text-embedding-3-small: 512 and 1536
         # text-embedding-3-large: 256, 1024, and 3072
-        return self.openai_client.embeddings.create(input=text,
-                                                    model=model,
-                                                    dimensions=embedding_size).data[0].embedding
+        return self.clients['openai'].embeddings.create(input=text,
+                                                        model=model,
+                                                        dimensions=embedding_size).data[0].embedding
 
     def add_text_embedding(self, df,
                            text_field,
@@ -148,6 +147,7 @@ class EndpointManager:
             "hf_alpacare-llama2-13b": "your_huggingface_endpoint_url",
             "openai_gpt-4-0125-preview": "gpt-4-0125-preview",
             "openai_gpt-4o-2024-05-13": "gpt-4o-2024-05-13",
+            "openai_gpt-4o-2024-08-06": "gpt-4o-2024-08-06",
             "anthropic_claude-3-5-sonnet-20240620": "claude-3-5-sonnet-20240620",
             "together_llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
         }
