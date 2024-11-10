@@ -14,7 +14,6 @@ if __name__ == "__main__":
     now = datetime.now()
     timestamp = now.strftime("%d-%m-%Y_%H-%M-%S")
     gen_tools = GenTools()
-    lang_tools = LangTools()
 
     parser = argparse.ArgumentParser(description="annotating text using LLMs")
     parser.add_argument("--input-file", type=str, help="path to raw input csv file")
