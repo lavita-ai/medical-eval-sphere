@@ -107,6 +107,18 @@ class ClusteringTools:
     @staticmethod
     def dataset_similarity(embeddings_a, embeddings_b, method="mean"):
         """Calculate the general similarity between two datasets using cosine similarity."""
+        if isinstance(embeddings_a, (list, pd.Series)):
+            embeddings_a = np.array(embeddings_a)
+        if isinstance(embeddings_b, (list, pd.Series)):
+            embeddings_b = np.array(embeddings_b)
+
+        if not isinstance(embeddings_a, (np.ndarray, pd.DataFrame)):
+            raise TypeError(
+                f"Expected embeddings_a to be numpy.ndarray or pandas.DataFrame, but got {type(embeddings_a)}")
+        if not isinstance(embeddings_b, (np.ndarray, pd.DataFrame)):
+            raise TypeError(
+                f"Expected embeddings_b to be numpy.ndarray or pandas.DataFrame, but got {type(embeddings_b)}")
+
         similarities = []
         for vec_a in embeddings_a:
             vec_a_similarities = []
@@ -129,7 +141,7 @@ class ClusteringTools:
 
         embeddings = np.vstack(df['embedding'])
 
-        tsne = TSNE(n_components=2, perplexity=30, n_iter=1000, random_state=42)
+        tsne = TSNE(n_components=2, perplexity=30, max_iter=1000, random_state=42)
         embeddings_2d = tsne.fit_transform(embeddings)
 
         # Plotting the 2D embeddings
