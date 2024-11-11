@@ -6,24 +6,54 @@ import os.path
 import logging
 import argparse
 
-from utils import LangTools
+from pathlib import Path
 from datetime import datetime
 from inference import GenTools
 
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+
+def get_output_file_path(output_path):
+    # Check if the provided path is a directory
+    if os.path.isdir(output_path):
+        # If it's a directory, generate a filename
+        file_path = os.path.join(output_path, f"llm_ann-{timestamp}.csv")
+    else:
+        # Ensure the parent directory exists and is writable
+        output_dir = os.path.dirname(output_path)
+        if not os.path.exists(output_dir):
+            raise ValueError(f"Directory '{output_dir}' does not exist.")
+        if not os.path.isdir(output_dir):
+            raise ValueError(f"'{output_dir}' is not a directory.")
+        if not os.access(output_dir, os.W_OK):
+            raise ValueError(f"Directory '{output_dir}' is not writable.")
+
+        # Ensure the file has a .csv extension
+        if not output_path.lower().endswith('.csv'):
+            raise ValueError("The output file must have a '.csv' extension.")
+        file_path = output_path
+
+    return file_path
+
+
 if __name__ == "__main__":
-    now = datetime.now()
-    timestamp = now.strftime("%d-%m-%Y_%H-%M-%S")
     gen_tools = GenTools()
 
-    parser = argparse.ArgumentParser(description="annotating text using LLMs")
-    parser.add_argument("--input-file", type=str, help="path to raw input csv file")
-    parser.add_argument("--output-dir", type=str, help="output csv file directory")
+    parser = argparse.ArgumentParser(description="Annotating text using LLMs")
+    parser.add_argument("--input-path", type=str, help="Path to the input CSV file. Example: './data/input.csv'",
+                        required=True)
+    parser.add_argument("--output-path", type=str,
+                        help="Full path or directory for the output CSV file. "
+                             "If a directory is provided, a filename will be automatically generated.",
+                        required=True)
     parser.add_argument("--text-columns", nargs='+',
-                        help="list of text columns to replace placeholders in prompt template in that order")
-    parser.add_argument("--prompt-template", type=str, help="path to prompt template")
+                        help="List of text columns to replace placeholders in the prompt template, in the specified order.",
+                        required=True)
+    parser.add_argument("--prompt-template", type=str,
+                        help="Path to the prompt template file. Example: './templates/prompt.txt'", required=True)
     parser.add_argument('--annotator-models', nargs='+',
-                        help='list of LLMs for annotation. supported models: {}'.format(
-                            str(gen_tools.endpoint_manager.list_models())))
+                        help='List of LLMs for annotation. supported models: {}'.format(
+                            str(gen_tools.endpoint_manager.list_models())), required=True)
     parser.add_argument('--log-steps', type=int, help='logging steps', default=100)
     args = parser.parse_args()
 
@@ -42,10 +72,8 @@ if __name__ == "__main__":
     logging.info(f"Command: {full_command}")
     # -------------------
 
-    if not os.path.exists(args.input_file):
+    if not os.path.exists(args.input_path):
         raise Exception("input file path does not exist")
-    if not os.path.exists(args.output_dir):
-        raise Exception("output directory path does not exist")
     if not os.path.exists(args.prompt_template):
         raise Exception("prompt template file does not exist")
 
@@ -59,10 +87,13 @@ if __name__ == "__main__":
         prompt_template = file.read()
         logging.info(f"Prompt template: {prompt_template}")
 
-    output_path = '{}/llm_ann-{}.csv'.format(args.output_dir, timestamp)
+    output_file_path = get_output_file_path(args.output_path)
 
-    with open(args.input_file, 'r') as input_file:
-        csv_reader = csv.DictReader(input_file)
+    if args.input_path == output_file_path:
+        raise Exception("Annotations cannot be saved into input file")
+
+    with open(args.input_path, 'r') as input_path:
+        csv_reader = csv.DictReader(input_path)
 
         # check if the text column exists
         if not all(col in csv_reader.fieldnames for col in args.text_columns):
@@ -72,7 +103,7 @@ if __name__ == "__main__":
         annotator_models = {model: f'pred_{model}' for model in args.annotator_models}
         header.extend(annotator_models.values())
 
-        with open(output_path, 'a', newline='') as output_file:
+        with open(output_file_path, 'w', newline='') as output_file:
             writer = csv.DictWriter(output_file, fieldnames=header)
             writer.writeheader()
             for row_index, row in enumerate(csv_reader, start=1):
@@ -88,7 +119,10 @@ if __name__ == "__main__":
                         logging.error(f"Exception: {json_string}")
                         print('error in generating llm response for row index {}.\n\ndetail: {}'.format(row_index,
                                                                                                         str(e)))
-                    writer.writerow(row)
-                    output_file.flush()
+                    try:
+                        writer.writerow(row)
+                        output_file.flush()
+                    except Exception as e:
+                        print(f"Failed to write row: {row}. Error: {e}")
                 if row_index == 1 or row_index % args.log_steps == 0:
                     print('annotated {} records.'.format(row_index))
