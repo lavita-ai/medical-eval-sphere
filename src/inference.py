@@ -149,7 +149,7 @@ class GenTools:
             x, model=embedding_model, embedding_size=embedding_size))
 
         return df
-    
+
     def save_embeddings(self, df, save_path):
         if 'embedding' not in df.columns:
             raise Exception("Embedding column does not exist")
