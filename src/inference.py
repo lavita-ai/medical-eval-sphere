@@ -4,6 +4,7 @@ import json
 import requests
 import tiktoken
 import anthropic
+import numpy as np
 
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -123,19 +124,62 @@ class GenTools:
                                                         model=model,
                                                         dimensions=embedding_size).data[0].embedding
 
-    def add_text_embedding(self, df,
-                           text_field,
-                           max_tokens=8000,
-                           embedding_model="text-embedding-3-small",
-                           embedding_size=512,
-                           embedding_encoding="cl100k_base"):
+    def get_embeddings(self, df,
+                       text_field='corrected_query',
+                       max_tokens=8000,
+                       embedding_model="text-embedding-3-large",
+                       embedding_size=1024,
+                       embedding_encoding="cl100k_base"):
+        """
+        This method loads or computes embeddings for the given DataFrame.
+        If embeddings already exist, it loads them. Otherwise, it computes new embeddings.
+        """
+        # Step 1: Check if embeddings already exist
+        if 'embedding' in df.columns:
+            # Convert stored string embeddings to numpy arrays if necessary
+            if isinstance(df.iloc[0]['embedding'], str):
+                df['embedding'] = df['embedding'].apply(lambda x: np.array(json.loads(x)).reshape(1, -1))
+            return df
+
+        # Step 2: Compute embeddings if they don't exist
         encoding = tiktoken.get_encoding(embedding_encoding)
         df["n_tokens"] = df[text_field].apply(lambda x: len(encoding.encode(x)))
         df = df[df.n_tokens <= max_tokens]
-        df["embedding"] = df[text_field].apply(lambda x: self.get_openai_embedding(x,
-                                                                                   model=embedding_model,
-                                                                                   embedding_size=embedding_size))
+        df["embedding"] = df[text_field].apply(lambda x: self.get_openai_embedding(
+            x, model=embedding_model, embedding_size=embedding_size))
+
         return df
+    
+    def save_embeddings(self, df, save_path):
+        if 'embedding' not in df.columns:
+            raise Exception("Embedding column does not exist")
+
+        def convert_to_json(x):
+            # Check if the embedding is already a valid JSON string
+            if isinstance(x, str):
+                try:
+                    # Try to load it; if successful, it's already a valid JSON string
+                    json.loads(x)
+                    return x
+                except json.JSONDecodeError:
+                    pass
+
+            # If it's a numpy array, convert to list first
+            if isinstance(x, np.ndarray):
+                x = x.tolist()
+
+            # If it's a nested list, flatten it to a single list
+            if isinstance(x, list) and len(x) > 0 and isinstance(x[0], list):
+                x = [item for sublist in x for item in sublist]
+
+            # Convert to JSON string
+            return json.dumps(x)
+
+        # Apply the conversion function to each row
+        df['embedding'] = df['embedding'].apply(convert_to_json)
+
+        # Save the DataFrame to CSV
+        df.to_csv(save_path, index=False)
 
 
 class EndpointManager:
