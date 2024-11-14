@@ -105,11 +105,23 @@ class ClusteringTools:
         self.clustering_methods = ["dbscan", "hierarchical"]
 
     @staticmethod
-    def dataset_similarity(embeddings_a, embeddings_b, method="mean"):
+    def is_valid_json_string(x):
+        """
+        Check if x is a valid JSON string that can be parsed into a Python object.
+        """
+        if isinstance(x, str):
+            try:
+                json.loads(x)
+                return True
+            except json.JSONDecodeError:
+                return False
+        return False
+
+    def dataset_similarity(self, embeddings_a, embeddings_b, method="mean"):
         """Calculate the general similarity between two datasets using cosine similarity."""
-        if isinstance(embeddings_a, (list, pd.Series)):
+        if isinstance(embeddings_a, (list, pd.Series)) or self.is_valid_json_string(embeddings_a):
             embeddings_a = np.array(embeddings_a)
-        if isinstance(embeddings_b, (list, pd.Series)):
+        if isinstance(embeddings_b, (list, pd.Series)) or self.is_valid_json_string(embeddings_b):
             embeddings_b = np.array(embeddings_b)
 
         if not isinstance(embeddings_a, (np.ndarray, pd.DataFrame)):
@@ -161,6 +173,13 @@ class ClusteringTools:
             raise Exception("Clustering method is not supported.")
         if 'embedding' not in list(df):
             raise Exception("Input df should include an \"embedding\" column")
+        else:
+            try:
+                if isinstance(df.iloc[0]['embedding'], str):
+                    df['embedding'] = df['embedding'].apply(lambda x: np.array(json.loads(x)).reshape(1, -1))
+            except:
+                raise Exception(
+                    "The embedding column in df is stored as string. There is an error when converting the string.")
 
         embeddings = np.vstack(df['embedding']).copy()
         threshold_distance = 1 - similarity_threshold
