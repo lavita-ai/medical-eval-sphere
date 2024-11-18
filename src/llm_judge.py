@@ -2,8 +2,9 @@ import ast
 import pickle
 import random
 import pandas as pd
-from collections import OrderedDict
+from pprint import pprint
 from collections import Counter
+from collections import OrderedDict
 
 from utils import jsonify
 from annotation_tools import LabelAnalysis
@@ -115,9 +116,11 @@ def main(num_batches=4):
     labels_ba, stat_ba = find_majority(labels_ba)
 
     print("Vote inconsistency in [ab] runs by models")
-    print(stat_ab)
+    print("-----------------------------------------")
+    pprint(stat_ab)
     print("\nVote inconsistency in [ba] runs by models")
-    print(stat_ba)
+    print("-----------------------------------------")
+    pprint(stat_ba)
 
     models_votes = {}
     disagreements = {}
@@ -158,9 +161,10 @@ def main(num_batches=4):
         sorted_disagreements[model] = sorted_criteria_dict
 
     print("\nDisagreements between [ab] and [ba] runs by model")
+    print("-------------------------------------------------")
     for k, v in sorted_disagreements.items():
-        print(f'model: {k}')
-        print(v)
+        print(f'* model: {k}')
+        pprint(v)
 
     final_votes = {}
     llm_1_votes = []
@@ -198,8 +202,9 @@ def main(num_batches=4):
                     print("There's a missing vote")
 
     print("\nAgreement between the two llm judges")
+    print("------------------------------------")
     agreements = label_analysis.calculate_agreement(llm_1_votes, llm_2_votes)
-    print(agreements)
+    pprint(agreements)
 
     with open('../data/llm_judge/llm_judgements.pkl', 'wb') as file:
         pickle.dump(final_votes, file)
