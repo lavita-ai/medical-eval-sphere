@@ -115,12 +115,15 @@ def main(num_batches=4):
     labels_ab, stat_ab = find_majority(labels_ab)
     labels_ba, stat_ba = find_majority(labels_ba)
 
-    print("Vote inconsistency in [ab] runs by models")
-    print("-----------------------------------------")
-    pprint(stat_ab)
-    print("\nVote inconsistency in [ba] runs by models")
-    print("-----------------------------------------")
-    pprint(stat_ba)
+    def print_inconsistency(stat_dict, run_type):
+        print(f"Vote inconsistency in [{run_type}] runs by models")
+        print("-----------------------------------------")
+        pprint(stat_dict)
+        sum_count = sum(item for item in stat_dict.values())
+        print(f'total: {sum_count}')
+
+    print_inconsistency(stat_ab[0], 'ab')
+    print_inconsistency(stat_ba[0], 'ba')
 
     models_votes = {}
     disagreements = {}
@@ -162,9 +165,11 @@ def main(num_batches=4):
 
     print("\nDisagreements between [ab] and [ba] runs by model")
     print("-------------------------------------------------")
-    for k, v in sorted_disagreements.items():
-        print(f'* model: {k}')
-        pprint(v)
+    for model_name, model_disagreements in sorted_disagreements.items():
+        print(f'* model: {model_name}')
+        pprint(model_disagreements)
+        total_count = sum(item['count'] for item in model_disagreements.values())
+        print(f'total: {total_count}')
 
     final_votes = {}
     llm_1_votes = []
