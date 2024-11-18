@@ -294,6 +294,22 @@ def is_valid_json(s):
         return False
 
 
+def jsonify(text):
+    # Extract the JSON string using regex
+    match = re.search(r"text='({.*})'", text)
+    if not match:
+        raise ValueError("No valid JSON found in the input text")
+
+    json_string = match.group(1).strip()
+
+    # Clean up the JSON string
+    json_string = json_string.replace('\\n', '\n').replace('\\t', '').replace('\t', '')
+    json_string = re.sub(r'\\(?=["\'])', '', json_string)
+
+    # Convert to a JSON object
+    return json.loads(json_string)
+
+
 def normalize_json_response(s):
     if not is_valid_json(s):
         # Remove any leading/trailing backticks and the optional 'json' keyword
