@@ -1,6 +1,7 @@
 import ast
 import pickle
 import random
+import argparse
 import pandas as pd
 from pprint import pprint
 from collections import Counter
@@ -18,10 +19,17 @@ label_to_int = {
     'neither': 4
 }
 
-llms = ["openai_gpt-4o-2024-05-13", "anthropic_claude-3-5-sonnet-20240620"]
+neutral_vote = {
+    'correctness': {'verdict': 'tie'},
+    'helpfulness': {'verdict': 'tie'},
+    'harmfulness': {'verdict': 'neither'},
+    'reasoning': {'verdict': 'tie'},
+    'efficiency': {'verdict': 'tie'},
+    'bias': {'verdict': 'neither'}
+}
 
 
-def get_labels(runs, num_batches=4):
+def get_labels(runs, llms, num_batches=4):
     labels = {}
 
     for batch_id in range(1, num_batches + 1):
@@ -44,12 +52,21 @@ def get_labels(runs, num_batches=4):
                     vote = row[f"pred_{llm}_{run_id}"]
 
                     json_object = {}
-                    # jsonify the model's response (by default, LLM's output is saved as string)
-                    if llm.startswith('openai'):
-                        parsed_list = ast.literal_eval(vote)
-                        json_object = parsed_list['response']
-                    elif llm.startswith('anthropic'):
-                        json_object = jsonify(vote)
+
+                    try:
+                        # jsonify the model's response (by default, LLM's output is saved as string)
+                        if llm.startswith('openai'):
+                            parsed_list = ast.literal_eval(vote)
+                            json_object = parsed_list['response']
+                        elif llm.startswith('anthropic'):
+                            json_object = jsonify(vote)
+                        else:
+                            print("LLM judge does not exist")
+                    except (ValueError, SyntaxError, KeyError, TypeError) as e:
+                        print(f"Failed to parse vote for {llm}: {e}. Using neutral vote.")
+
+                    if json_object == {}:
+                        json_object = neutral_vote
 
                     for criterion, verdict in json_object.items():
                         labels[batch_id][global_key][llm].setdefault(criterion, []).append(verdict['verdict'])
@@ -105,10 +122,10 @@ def find_majority(labels, num_batches=4):
 
 
 # Main execution block
-def main(num_batches=4):
+def main(llms, num_batches=4):
     # reading all labels from csv files
-    labels_ab = get_labels(['ab1', 'ab2', 'ab3'])
-    labels_ba = get_labels(['ba1', 'ba2', 'ba3'])
+    labels_ab = get_labels(['ab1', 'ab2', 'ab3'], llms)
+    labels_ba = get_labels(['ba1', 'ba2', 'ba3'], llms)
 
     # for each model, find the majority vote across ab and ba runs
     # at the end of this step, we will have one vote for each criterion of each question for each model per run
@@ -215,4 +232,9 @@ def main(num_batches=4):
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="LLMs-as-a-judge analysis")
+    parser.add_argument("--llms", nargs="+", help="List of LLM judges", required=True)
+
+    args = parser.parse_args()
+
+    main(args.llms)

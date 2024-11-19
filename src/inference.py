@@ -193,6 +193,7 @@ class EndpointManager:
             "openai_gpt-4o-2024-05-13": "gpt-4o-2024-05-13",
             "openai_gpt-4o-2024-08-06": "gpt-4o-2024-08-06",
             "anthropic_claude-3-5-sonnet-20240620": "claude-3-5-sonnet-20240620",
+            "anthropic_claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
             "together_llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
         }
 
