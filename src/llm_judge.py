@@ -159,9 +159,8 @@ def main(num_batches=4):
 
     for model, criteria_dict in disagreements.items():
         # Sort criteria_dict based on the count in descending order
-        sorted_criteria_dict = OrderedDict(
+        sorted_disagreements[model] = OrderedDict(
             sorted(criteria_dict.items(), key=lambda item: item[1]['count'], reverse=True))
-        sorted_disagreements[model] = sorted_criteria_dict
 
     print("\nDisagreements between [ab] and [ba] runs by model")
     print("-------------------------------------------------")
