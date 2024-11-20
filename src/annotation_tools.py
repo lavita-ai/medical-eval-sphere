@@ -1,4 +1,6 @@
+import os
 import copy
+import pickle
 import random
 import itertools
 import numpy as np
@@ -381,3 +383,61 @@ class AnnotationData:
         pairs_data = [pair for _, row in df.iterrows() for pair in create_pairs(row)]
         ann_df = pd.DataFrame(pairs_data)
         return ann_df
+
+    def load_labels(self, annotators, batch_config, llm_labels_path=None):
+        """
+        loading human and llm labels
+        :param annotators:
+        :param batch_config:
+        :param llm_labels_path:
+        :return:
+        """
+
+        label_analysis = LabelAnalysis(annotators=annotators)
+
+        # check if all batch files exist
+        batch_ids = [batch['batch_id'] for batch in batch_config]
+        for i in batch_ids:
+            batch_path = f'../data/batches/batch{i}.csv'
+            if not os.path.exists(batch_path):
+                raise FileNotFoundError(f"The batch file at '{batch_path}' does not exist. Check ../data/batches/")
+
+        # load human labels from labelbox
+        labels = label_analysis.create_labels_data(batch_config)
+
+        # check if the llm votes file is available
+        if os.path.exists(llm_labels_path):
+            judge_name = 'llm'
+
+            # load the dictionary from the JSON file
+            with open(llm_labels_path, 'rb') as file:
+                llm_dict = pickle.load(file)
+
+            for batch_id, global_keys in labels.items():
+
+                batch_path = f"../data/batches/batch{batch_id}.csv"
+
+                df_batch = pd.read_csv(batch_path)
+
+                for global_key, criteria in global_keys.items():
+                    row = df_batch.loc[df_batch['global_key'] == global_key]
+
+                    if len(row) == 1:
+                        for criterion, votes in criteria.items():
+
+                            if criterion not in ['difficulty', 'feedback'] and judge_name not in [list(v.keys())[0]
+                                                                                                  for
+                                                                                                  v in
+                                                                                                  votes]:
+
+                                if global_key in llm_dict[batch_id] and criterion in llm_dict[batch_id][global_key]:
+
+                                    verdict = llm_dict[batch_id][global_key][criterion]
+
+                                    # load the model name associated with a response
+                                    if verdict in ['response_a', 'response_b']:
+                                        verdict = row.iloc[0]["model_" + verdict.split('_')[1]]
+
+                                    labels[batch_id][global_key][criterion].append({judge_name: verdict})
+
+        return labels
