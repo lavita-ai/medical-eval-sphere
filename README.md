@@ -5,7 +5,7 @@
 
 ## Medical QA Benchmark 🤗
 
-```
+```python
 from datasets import load_dataset
 
 ds = load_dataset("lavita/medical-eval-sphere")
