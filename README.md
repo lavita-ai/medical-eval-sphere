@@ -22,3 +22,13 @@ ANTHROPIC_API_KEY=your_api_key_here
 OPENAI_API_KEY=your_api_key_here
 LABELBOX_API_KEY=your_api_key_here
 ```
+
+### Citation
+```bibtex
+@article{hosseini2024benchmark,
+  title={A Benchmark for Long-Form Medical Question Answering},
+  author={Hosseini, Pedram and Sin, Jessica M and Ren, Bing and Thomas, Bryceton G and Nouri, Elnaz and Farahanchi, Ali and Hassanpour, Saeed},
+  journal={arXiv preprint arXiv:2411.09834},
+  year={2024}
+}
+```
