@@ -38,19 +38,28 @@ class GenTools:
         else:
             raise ValueError(f"Unknown model name: {model_name}")
 
-    def execute_prompt(self, user_prompt, model_name, system_prompt="You are a helpful assistant.", output_json=True):
+    def execute_prompt(self, user_prompt, model_name, system_prompt="You are a helpful assistant.", output_json=True,
+                       **kwargs):
+        temperature = kwargs.get("temperature", 0)
+        max_tokens = kwargs.get("max_tokens", 1024)
+
         if output_json:
             system_prompt = "You are a helpful assistant designed to output JSON."
+
         model_url = self.endpoint_manager.endpoint_urls[model_name]
+
         if model_name.startswith('hf_'):
-            return self.hf_endpoints.get_llm_response(user_prompt, model_url, use_openai=False, temperature=0,
-                                                      max_tokens=1024)
+            return self.hf_endpoints.get_llm_response(user_prompt,
+                                                      model_url,
+                                                      use_openai=False,
+                                                      temperature=temperature,
+                                                      max_tokens=max_tokens)
         elif model_name.startswith(('openai', 'together')):
             client = self.get_client(model_name)
 
             params = {
                 "model": model_url,
-                "temperature": 0,
+                "temperature": temperature,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -70,9 +79,9 @@ class GenTools:
         elif model_name.startswith('anthropic'):
             response = self.get_client(model_name).messages.create(
                 model=model_url,
-                max_tokens=2048,
+                max_tokens=max_tokens,
                 system=system_prompt,
-                temperature=0,
+                temperature=temperature,
                 messages=[
                     {"role": "user", "content": user_prompt}
                 ]
@@ -192,6 +201,7 @@ class EndpointManager:
             "openai_gpt-4-0125-preview": "gpt-4-0125-preview",
             "openai_gpt-4o-2024-05-13": "gpt-4o-2024-05-13",
             "openai_gpt-4o-2024-08-06": "gpt-4o-2024-08-06",
+            "openai_gpt-4o-2024-11-20": "gpt-4o-2024-11-20",
             "anthropic_claude-3-5-sonnet-20240620": "claude-3-5-sonnet-20240620",
             "anthropic_claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
             "together_llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"

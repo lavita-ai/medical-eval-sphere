@@ -54,6 +54,8 @@ if __name__ == "__main__":
     parser.add_argument('--annotator-models', nargs='+',
                         help='List of LLMs for annotation. supported models: {}'.format(
                             str(gen_tools.endpoint_manager.list_models())), required=True)
+    parser.add_argument('--temperature', type=float, default=0, help="Sampling temperature for LLM.")
+    parser.add_argument('--max-tokens', type=float, default=1024, help="Sampling temperature for LLM.")
     parser.add_argument('--log-steps', type=int, help='logging steps', default=100)
     args = parser.parse_args()
 
@@ -112,7 +114,10 @@ if __name__ == "__main__":
                         # replacing prompt placeholders with row values
                         arguments = [row[col].strip() for col in args.text_columns]
                         prompt = gen_tools.build_prompt(prompt_template, arguments)
-                        row[model_pred_col] = gen_tools.execute_prompt(prompt, model_name=model_name)
+                        row[model_pred_col] = gen_tools.execute_prompt(prompt,
+                                                                       model_name=model_name,
+                                                                       temperature=args.temperature,
+                                                                       max_tokens=args.max_tokens)
                     except Exception as e:
                         log_dict = {'prompt': prompt}
                         json_string = json.dumps(log_dict, ensure_ascii=False)
