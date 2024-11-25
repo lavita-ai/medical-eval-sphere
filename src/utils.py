@@ -294,20 +294,63 @@ def is_valid_json(s):
         return False
 
 
-def jsonify(text):
-    # Extract the JSON string using regex
-    match = re.search(r"text='({.*})'", text)
-    if not match:
-        raise ValueError("No valid JSON found in the input text")
-
-    json_string = match.group(1).strip()
-
-    # Clean up the JSON string
-    json_string = json_string.replace('\\n', '\n').replace('\\t', '').replace('\t', '')
+def clean_json_string(json_string):
+    """Cleans escape characters and formats JSON string properly."""
+    # Replace escaped newlines and tabs with actual newlines/tabs
+    json_string = json_string.replace('\\n', '\n').replace('\\t', '\t')
+    # Remove unnecessary escape characters before quotes
     json_string = re.sub(r'\\(?=["\'])', '', json_string)
+    return json_string
 
-    # Convert to a JSON object
-    return json.loads(json_string)
+
+def extract_json(text):
+    """Fallback method to extract JSON using \n\n pattern."""
+    # Locate the start of the 'text' field
+    start = text.find("text='") + len("text='")
+    if start == -1:
+        return None
+
+    # Extract everything starting from "text='"
+    remaining_text = text[start:]
+
+    # Split at the first occurrence of '\n\n'
+    json_part = remaining_text.split("\\n\\n", 1)[0]  # First part before explanations
+
+    # Remove surrounding single quotes (if any)
+    if json_part.endswith("'"):
+        json_part = json_part[:-1]
+
+    try:
+        # Clean and parse the JSON
+        json_part = clean_json_string(json_part)
+        return json.loads(json_part)
+    except json.JSONDecodeError:
+        return None
+
+
+def jsonify(text):
+    """Extract and convert JSON string from LLM response."""
+    # Attempt to match using regex
+    match = re.search(r"text='({.*})'", text)
+
+    if match:
+        json_string = match.group(1).strip()
+        # Clean up the JSON string
+        json_string = json_string.replace('\\n', '\n').replace('\\t', '').replace('\t', '')
+        json_string = re.sub(r'\\(?=["\'])', '', json_string)
+
+        try:
+            return json.loads(json_string)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Failed to parse JSON with regex: {e}")
+
+    # Fallback to extract_json method
+    json_data = extract_json(text)
+    if json_data:
+        return json_data
+
+    # Raise exception if both methods fail
+    raise ValueError("No valid JSON found in the input text")
 
 
 def normalize_json_response(s):
@@ -398,3 +441,52 @@ def r_pearson(x, y):
     pearson_correlation = numerator / denominator
 
     return pearson_correlation
+
+
+def create_public_dataset(labels, annotators):
+    difficulty_levels = {"1": "basic",
+                         "2": "intermediate",
+                         "3": "advanced"}
+
+    def anonymize_name(name):
+        name = name.replace("hf_", "").replace("-lavita", "")
+        return name
+
+    def get_annotations(ann):
+        ann_json = {}
+        for criterion, votes in ann.items():
+            ann_json[criterion] = {}
+            for vote in votes:
+                annotator = list(vote.keys())[0]
+                verdict = anonymize_name(list(vote.values())[0])
+                ann_json[criterion][annotators[annotator]] = verdict
+        return ann_json
+
+    batch_files = []
+
+    for i in labels.keys():
+        batch_files.append(f'../data/batches/batch{i}.csv')
+
+    batch_df_list = [pd.read_csv(batch_file) for batch_file in batch_files]
+    batch_df = pd.concat(batch_df_list, ignore_index=True)
+
+    dataset_json = {}
+
+    for batch_id, questions in labels.items():
+        for global_key, annotations in questions.items():
+            dataset_json[global_key] = {}
+            dataset_json[global_key]['batch_id'] = batch_id
+            row = batch_df.loc[batch_df['global_key'] == global_key]
+
+            if len(row) == 1:
+                dataset_json[global_key]['medical_question'] = str(row.iloc[0]['corrected_input_text'])
+                dataset_json[global_key]['model_a'] = anonymize_name(str(row.iloc[0]['model_a']))
+                dataset_json[global_key]['response_a'] = str(row.iloc[0]['response_a'])
+                dataset_json[global_key]['model_b'] = anonymize_name(str(row.iloc[0]['model_b']))
+                dataset_json[global_key]['response_b'] = str(row.iloc[0]['response_b'])
+                dataset_json[global_key]['pair_order'] = anonymize_name(str(row.iloc[0]['pair_order']))
+                annotations = get_annotations(annotations)
+                annotations['difficulty']['llm'] = difficulty_levels[str(row.iloc[0]['difficulty'])]
+                dataset_json[global_key]['annotations'] = annotations
+
+    return dataset_json
