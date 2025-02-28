@@ -71,7 +71,7 @@ class GenTools:
                 params["response_format"] = {"type": "json_object"}
 
             response = client.chat.completions.create(**params)
-            response_json = self._process_response(response, output_json)
+            response_json = self._process_response(response, output_json, model_name)
             response_json['prompt_tokens'] = response.usage.prompt_tokens
             response_json['completion_tokens'] = response.usage.completion_tokens
             response_json['total_tokens'] = response.usage.total_tokens
@@ -86,13 +86,19 @@ class GenTools:
                     {"role": "user", "content": user_prompt}
                 ]
             )
-            return response
+            response_json = self._process_response(response, output_json, model_name)
+            return json.dumps(response_json)
         else:
             raise Exception("model is not found on the list of endpoints.")
 
     @staticmethod
-    def _process_response(response, output_json):
-        content = response.choices[0].message.content.strip()
+    def _process_response(response, output_json, model_name):
+        if model_name.startswith(('openai', 'together')):
+            content = response.choices[0].message.content.strip()
+        elif model_name.startswith('anthropic'):
+            content = response.content[0].text
+        else:
+            raise Exception(f'response type is not supported for model: {model_name}')
 
         if output_json:
             normalized_content = normalize_json_response(content.replace('\n', ''))
@@ -202,8 +208,10 @@ class EndpointManager:
             "openai_gpt-4o-2024-05-13": "gpt-4o-2024-05-13",
             "openai_gpt-4o-2024-08-06": "gpt-4o-2024-08-06",
             "openai_gpt-4o-2024-11-20": "gpt-4o-2024-11-20",
+            "openai_gpt-4.5-preview-2025-02-27": "gpt-4.5-preview-2025-02-27",
             "anthropic_claude-3-5-sonnet-20240620": "claude-3-5-sonnet-20240620",
             "anthropic_claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
+            "anthropic_claude-3-7-sonnet-20250219": "claude-3-7-sonnet-20250219",
             "together_llama-3.1-405b-instruct": "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo"
         }
 

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from pathlib import Path
+from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient, ContentSettings
 from scipy.stats import norm
 from scipy.cluster.hierarchy import linkage, fcluster
@@ -20,6 +21,8 @@ from sklearn.metrics.pairwise import cosine_distances, cosine_similarity
 parent_path = Path(os.path.abspath(__file__)).parents[0]
 root_path = Path(os.path.abspath(__file__)).parents[1]
 sys.path.append(str(root_path))
+
+load_dotenv()
 
 azure_storage_connection_string = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
 
