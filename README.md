@@ -1,7 +1,10 @@
-# Medical Evaluation Sphere
+# Medical Sphere
+
+> 🏥 We're building the largest global community for evaluating AI models in healthcare.  
+> 🌐 Join us: https://sphere.lavita.ai
+
 
 <img src="assets/medical_eval_sphere.png" alt="Medical Evaluation Sphere Logo" width="300"/>
-
 
 ## Medical QA Benchmark 🤗
 
